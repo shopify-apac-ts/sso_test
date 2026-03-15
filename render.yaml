@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: sso-test
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      # ★ Set the following manually in Render Dashboard
+      # BASE_URL: The URL Render assigns after deployment (e.g. https://your-service.onrender.com)
+      # CLIENT_ID: Client ID to register in Shopify
+      # CLIENT_SECRET: Client secret to register in Shopify
