@@ -1,2 +1,8 @@
+<!-- 1. The original code. -->
 <!-- <a href="{%- if customer -%}{{ routes.account_url }}{%- else -%}{{ routes.account_login_url }}{%- endif -%}" class="header__icon header__icon--account link focus-inset{% if section.settings.menu != blank %} small-hide{% endif %}"> -->
+
+<!-- 2. Modified code linked to custom login page -->
 <a href="/pages/custom-login-page" class="header__icon header__icon--account link focus-inset{% if section.settings.menu != blank %} small-hide{% endif %}">
+
+<!-- 3. If you just want to change redirection after login, use the following code replacing routes.account_login_url with the raw customer authentication URL.-->
+<!-- <a href="{%- if customer -%}{{ routes.account_url }}{%- else -%}/customer_authentication/login?return_to={{ "/pages/custom-login-page" | url_encode }}{%- endif -%}" class="header__icon header__icon--account link focus-inset{% if section.settings.menu != blank %} small-hide{% endif %}"> -->

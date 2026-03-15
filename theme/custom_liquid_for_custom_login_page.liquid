@@ -212,6 +212,10 @@
     if (lastName) sessionStorage.setItem('reg_last_name', lastName);
     if (firstName) sessionStorage.setItem('reg_first_name', firstName);
 
+    // login_hint is for email pre-fill, and login_hint_mode=submit is for clicking the login button.
+    // Check the following pages.
+    // https://shopify.dev/docs/storefronts/themes/login
+    // https://shopify.dev/docs/storefronts/headless/bring-your-own-stack/hydrogen-with-account-component
     const loginUrl = '/customer_authentication/login'
       + '?return_to={{ "/pages/custom-login-page" | url_encode }}'
       + '&login_hint_mode=submit'

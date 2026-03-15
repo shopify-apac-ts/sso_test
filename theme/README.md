@@ -10,12 +10,14 @@ This is a separate topic from the OIDC provider sample in the repository root.
 
 | File | Description |
 |---|---|
-| `header_liquid_for_custom_login_page.liquid` | Replacement snippet for the account icon in the theme Header section — redirects to `/pages/custom-login-page` instead of the default account URL |
+| `header_liquid_for_custom_login_page.liquid` | Header section snippet with three variants — original, full custom page, and redirect-only (see below) |
 | `custom_liquid_for_custom_login_page.liquid` | Custom Liquid block to embed in a Shopify page — renders a registration form (logged-out state) or a welcome screen (logged-in state) |
 
 ---
 
 ## How It Works
+
+### Option A — Full custom page (variant 2 in header snippet)
 
 ```
 Customer clicks account icon
@@ -34,20 +36,46 @@ Customer clicks account icon
                                                   ▼
                                  /customer_authentication/login
                                    ?login_hint=<email>
+                                   &login_hint_mode=submit
                                    &return_to=/pages/custom-login-page
                                           │
                                           ▼
                               New Customer Accounts login/signup flow
+                                          │
+                                          ▼
+                               Return to /pages/custom-login-page
+                                   (now shows welcome screen)
 ```
 
-1. The header snippet replaces the default `routes.account_login_url` link with `/pages/custom-login-page`.
-2. On that page, the Custom Liquid block checks `{% if customer %}`:
+1. The header snippet redirects the account icon to `/pages/custom-login-page`.
+2. The Custom Liquid block checks `{% if customer %}`:
    - **Logged in**: Shows the customer's name, email, and links to their profile and logout.
    - **Not logged in**: Shows a registration form.
-3. When the customer submits the form, JavaScript redirects to `/customer_authentication/login` with:
-   - `login_hint` — the entered email address (pre-fills the email field in the auth flow)
-   - `return_to` — `/pages/custom-login-page` (returns here after login/signup)
-   - `login_hint_mode=submit` — automatically submits the email step without extra user interaction
+3. On form submit, JavaScript redirects to `/customer_authentication/login` with:
+   - `login_hint` — pre-fills the email field in the New Customer Accounts flow
+   - `login_hint_mode=submit` — automatically advances past the email entry step without extra user interaction
+   - `return_to` — brings the customer back to `/pages/custom-login-page` after login/signup
+
+### Option B — Redirect-only (variant 3 in header snippet)
+
+Use this when you only need to change the post-login destination, without building a fully custom page.
+
+```
+Customer clicks account icon
+        │
+        ├──── [Logged in] ────▶ routes.account_url  (standard My Account)
+        │
+        └── [Not logged in] ──▶ /customer_authentication/login
+                                  ?return_to=/pages/custom-login-page
+                                          │
+                                          ▼
+                              New Customer Accounts login/signup flow
+                                          │
+                                          ▼
+                               Return to /pages/custom-login-page
+```
+
+The standard New Customer Accounts login UI is used as-is; only the post-login redirect destination is customized via `return_to`.
 
 ---
 
@@ -62,9 +90,13 @@ Customer clicks account icon
 ### 2. Update the Header section
 
 1. In **Online Store → Themes → Customize**, open the **Header** section code.
-2. Find the account icon anchor tag and replace it with the snippet from `header_liquid_for_custom_login_page.liquid`.
+2. Find the account icon anchor tag and replace it with one of the three variants in `header_liquid_for_custom_login_page.liquid`:
 
-> The original line is preserved as a comment in the snippet for easy rollback.
+   | Variant | When to use |
+   |---|---|
+   | 1 — Original (commented out) | Baseline / rollback reference |
+   | 2 — Full custom page | Use with `custom_liquid_for_custom_login_page.liquid` (Option A) |
+   | 3 — Redirect-only (commented out) | Just change post-login destination, keep standard login UI (Option B) |
 
 ---
 
