@@ -71,6 +71,10 @@ In the Shopify admin or Partner Dashboard, enter the following SSO provider sett
 | Additional scopes | *(leave blank)* |
 | Logout redirect URI parameter name | `post_logout_redirect_uri` |
 
+## Demo
+
+See the **[Wiki](../../wiki)** for demo videos of each scenario.
+
 ## Test Login
 
 On the login screen, sign in with **any email address and password**. No real authentication is performed.
