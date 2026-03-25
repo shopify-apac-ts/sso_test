@@ -29,7 +29,7 @@ const CUSTOMER_API_URL =
   "shopify://customer-account/api/2026-01/graphql.json";
 
 // Replace with your deployed SSO server URL and redeploy the extension.
-const SSO_BASE_URL = "https://your-sso-server.onrender.com";
+const SSO_BASE_URL = "https://sso-test-zjts.onrender.com";
 
 // -- Types --
 
