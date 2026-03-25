@@ -3,7 +3,6 @@
 //   - Shopify session tokens (HS256, signed with SHOPIFY_API_SECRET)
 //   - OIDC access tokens (RS256, signed with this server's RSA private key)
 import type { LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import { jwtVerify } from "jose";
 import { getPublicKey } from "~/lib/keys.server";
 import { getBaseUrl } from "~/lib/oidc.server";
@@ -16,7 +15,7 @@ const corsHeaders = {
 };
 
 function unauthorized() {
-  return json(
+  return Response.json(
     { error: "invalid_token" },
     {
       status: 401,
@@ -57,9 +56,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
       // Shopify session tokens carry dest/sid but not email — derive a placeholder
       const dest = (payload as Record<string, unknown>).dest as string | undefined;
       email = dest ? `customer@${new URL(dest).hostname}` : undefined;
-    } catch {
-      // Not a valid Shopify session token — fall through to RS256 path
+      console.log("[userinfo] verified via HS256 (Shopify session token) | payload:", JSON.stringify(payload));
+    } catch (err) {
+      console.log("[userinfo] HS256 verification failed, falling back to RS256 |", (err as Error).message);
     }
+  } else {
+    console.log("[userinfo] SHOPIFY_API_SECRET not set — skipping HS256 path");
   }
 
   // Path 2: OIDC access token — RS256 signed with this server's RSA key
@@ -72,7 +74,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
       });
       sub = payload.sub;
       email = (payload as Record<string, unknown>).email as string | undefined;
-    } catch {
+      console.log("[userinfo] verified via RS256 (OIDC access token) | sub:", sub);
+    } catch (err) {
+      console.log("[userinfo] RS256 verification failed |", (err as Error).message);
       return unauthorized();
     }
   }
@@ -83,15 +87,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const profile = getSsoTestProfile(sub);
 
-  return json(
-    {
-      sub,
-      email: email ?? `${sub}@test.invalid`,
-      email_verified: true,
-      given_name: profile.given_name,
-      family_name: profile.family_name,
-      address: profile.address,
-    },
-    { headers: corsHeaders }
-  );
+  const responseBody = {
+    sub,
+    email: email ?? `${sub}@test.invalid`,
+    email_verified: true,
+    given_name: profile.given_name,
+    family_name: profile.family_name,
+    address: profile.address,
+  };
+  console.log("[userinfo] response:", JSON.stringify(responseBody));
+
+  return Response.json(responseBody, { headers: corsHeaders });
 }
