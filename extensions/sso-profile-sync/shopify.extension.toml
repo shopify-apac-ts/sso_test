@@ -9,3 +9,6 @@ type = "ui_extension"
 [[extensions.targeting]]
 target = "customer-account.profile.block.render"
 module = "./src/Extension.tsx"
+
+[extensions.capabilities]
+api_access = true
