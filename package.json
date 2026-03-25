@@ -1,6 +1,9 @@
 {
   "name": "sso-test",
   "private": true,
+  "workspaces": [
+    "extensions/*"
+  ],
   "sideEffects": false,
   "type": "module",
   "engines": {

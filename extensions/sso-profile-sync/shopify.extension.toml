@@ -1,0 +1,11 @@
+api_version = "2026-01"
+
+[[extensions]]
+name = "SSO Profile Sync"
+handle = "sso-profile-sync"
+uid = "51dde3f5-20f1-d66b-d8ad-5343677164ef7ee4369b"
+type = "ui_extension"
+
+[[extensions.targeting]]
+target = "customer-account.profile.block.render"
+module = "./src/Extension.tsx"

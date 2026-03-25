@@ -1,5 +1,36 @@
 // In-memory store for testing (reset on server restart)
 
+export interface OidcAddress {
+  street_address: string;
+  locality: string;
+  region: string;
+  postal_code: string;
+  country: string;
+}
+
+export interface SsoProfile {
+  given_name: string;
+  family_name: string;
+  address: OidcAddress;
+}
+
+// Returns a fresh test profile on every call.
+// address2 contains the current ISO timestamp to make changes visible on each sync.
+export function getSsoTestProfile(_userId: string): SsoProfile {
+  const ts = new Date().toISOString();
+  return {
+    given_name: "Taro",
+    family_name: "Yamada",
+    address: {
+      street_address: `1-1-1 Chiyoda\nChiyoda Building 101 (${ts})`,
+      locality: "Chiyoda-ku",
+      region: "Tokyo",
+      postal_code: "100-0001",
+      country: "JP",
+    },
+  };
+}
+
 export interface AuthCodeData {
   userId: string;
   email: string;
