@@ -72,7 +72,7 @@ export function getShopifyClaimsProfile(_userId: string): ShopifyClaimsProfile {
         first_name: "Taro Claims",
         last_name: "Yamada",
         phone: "+81312345678",
-        default: true,
+        default: false,
       },
     ],
   };
