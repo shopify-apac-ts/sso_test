@@ -12,3 +12,10 @@ module = "./src/Extension.tsx"
 
 [extensions.capabilities]
 api_access = true
+
+[extensions.settings]
+  [[extensions.settings.fields]]
+  key = "sync_enabled"
+  type = "boolean"
+  name = "Enable SSO Profile Sync"
+  description = "When enabled, customer profile data (name and address) is automatically synced from the SSO server on each profile page visit."

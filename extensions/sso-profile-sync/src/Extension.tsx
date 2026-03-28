@@ -1,34 +1,17 @@
 // Customer Account UI Extension — SSO Profile Sync
-// Renders a toggle on the Profile page that controls whether profile data
-// is synced from the SSO server on each visit.
+// Renders invisibly on the Profile page and performs two-phase sync
+// when the merchant setting "sync_enabled" is true (default: true).
 //
-// When enabled, performs two-phase sync:
 //   Phase A (storage empty): Fetch SSO data, push to Customer Account API, store data, navigate.
 //   Phase B (storage present): Query current customer data, compare with stored SSO data,
 //                              revert any changes by re-applying SSO data, then navigate.
 //
 // Navigation guard (sso_nav_guard) prevents an infinite loop after Phase A/B redirects.
+// Toggle is controlled via the extension setting in the Shopify merchant admin (not customer-facing).
 
 import "@shopify/ui-extensions/preact";
-import { render, type ComponentChildren, type RefObject } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
-
-// Augment JSX types for Shopify UI Extension web components
-declare module "preact" {
-  namespace JSX {
-    interface IntrinsicElements {
-      "s-section": { heading?: string; children?: ComponentChildren };
-      "s-stack": { direction?: string; gap?: string; children?: ComponentChildren };
-      "s-text": { children?: ComponentChildren };
-      "s-switch": {
-        label?: string;
-        name?: string;
-        checked?: boolean;
-        ref?: RefObject<HTMLElement>;
-      };
-    }
-  }
-}
+import { render } from "preact";
+import { useEffect } from "preact/hooks";
 
 // Declare the global shopify object provided by the extension runtime
 declare const shopify: {
@@ -39,11 +22,11 @@ declare const shopify: {
     delete(key: string): Promise<void>;
   };
   navigation: { navigate(url: string): void };
+  settings: { value: Record<string, string | number | boolean | undefined> | null };
 };
 
 const STORAGE_KEY = "sso_profile_data";
 const NAV_GUARD_KEY = "sso_nav_guard";
-const SYNC_ENABLED_KEY = "sso_sync_enabled";
 
 const CUSTOMER_API_URL =
   "shopify://customer-account/api/2026-01/graphql.json";
@@ -197,118 +180,82 @@ function profileMatchesCustomer(
   );
 }
 
-// -- Sync logic (extracted so it can be skipped when toggle is off) --
-
-async function runSync(): Promise<void> {
-  try {
-    // Check nav guard — cleared once after each sync-triggered navigation
-    const guard = await shopify.storage.read(NAV_GUARD_KEY);
-    if (guard) {
-      await shopify.storage.delete(NAV_GUARD_KEY);
-      return; // Skip this cycle; was triggered by our own navigation
-    }
-
-    const stored = await shopify.storage.read<SsoProfile>(STORAGE_KEY);
-
-    if (!stored) {
-      // ── Phase A: Initial sync ─────────────────────────────────────────
-      const token = await shopify.sessionToken.get();
-
-      const res = await fetch(`${SSO_BASE_URL}/userinfo`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        console.error("[sso-sync] userinfo fetch failed:", res.status);
-        return;
-      }
-      const profile: SsoProfile = await res.json();
-
-      const customer = await queryCustomer();
-      if (!customer) {
-        console.error("[sso-sync] failed to query customer");
-        return;
-      }
-
-      await updateCustomerName(profile.given_name, profile.family_name);
-      await upsertAddress(customer.defaultAddress?.id ?? null, profile.address);
-
-      await shopify.storage.write(STORAGE_KEY, profile);
-      await shopify.storage.write(NAV_GUARD_KEY, "1");
-      shopify.navigation.navigate("shopify:customer-account/profile");
-    } else {
-      // ── Phase B: Change guard ─────────────────────────────────────────
-      const customer = await queryCustomer();
-      if (!customer) {
-        console.error("[sso-sync] failed to query customer");
-        return;
-      }
-
-      if (!profileMatchesCustomer(stored, customer)) {
-        console.log("[sso-sync] drift detected — reverting to SSO data");
-        await updateCustomerName(stored.given_name, stored.family_name);
-        await upsertAddress(
-          customer.defaultAddress?.id ?? null,
-          stored.address
-        );
-        await shopify.storage.write(NAV_GUARD_KEY, "1");
-        shopify.navigation.navigate("shopify:customer-account/profile");
-      }
-    }
-  } catch (err) {
-    console.error("[sso-sync] unexpected error:", err);
-  }
-}
-
 // -- Extension component --
 
 function SsoProfileSync() {
-  const [enabled, setEnabled] = useState(true);
-  const switchEl = useRef<HTMLElement>(null);
-
-  // Load toggle state from storage and run sync if enabled
   useEffect(() => {
-    void (async () => {
-      const stored = await shopify.storage.read<boolean>(SYNC_ENABLED_KEY);
-      const isEnabled = stored ?? true;
-      setEnabled(isEnabled);
-      if (isEnabled) await runSync();
-    })();
+    void run();
+
+    async function run() {
+      try {
+        // Check merchant setting — defaults to enabled if not set
+        const syncEnabled = shopify.settings.value?.sync_enabled ?? true;
+        if (!syncEnabled) {
+          console.log("[sso-sync] sync disabled by merchant setting");
+          return;
+        }
+
+        // Check nav guard — cleared once after each sync-triggered navigation
+        const guard = await shopify.storage.read(NAV_GUARD_KEY);
+        if (guard) {
+          await shopify.storage.delete(NAV_GUARD_KEY);
+          return; // Skip this cycle; was triggered by our own navigation
+        }
+
+        const stored = await shopify.storage.read<SsoProfile>(STORAGE_KEY);
+
+        if (!stored) {
+          // ── Phase A: Initial sync ─────────────────────────────────────────
+          const token = await shopify.sessionToken.get();
+
+          const res = await fetch(`${SSO_BASE_URL}/userinfo`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            console.error("[sso-sync] userinfo fetch failed:", res.status);
+            return;
+          }
+          const profile: SsoProfile = await res.json();
+
+          const customer = await queryCustomer();
+          if (!customer) {
+            console.error("[sso-sync] failed to query customer");
+            return;
+          }
+
+          await updateCustomerName(profile.given_name, profile.family_name);
+          await upsertAddress(customer.defaultAddress?.id ?? null, profile.address);
+
+          await shopify.storage.write(STORAGE_KEY, profile);
+          await shopify.storage.write(NAV_GUARD_KEY, "1");
+          shopify.navigation.navigate("shopify:customer-account/profile");
+        } else {
+          // ── Phase B: Change guard ─────────────────────────────────────────
+          const customer = await queryCustomer();
+          if (!customer) {
+            console.error("[sso-sync] failed to query customer");
+            return;
+          }
+
+          if (!profileMatchesCustomer(stored, customer)) {
+            console.log("[sso-sync] drift detected — reverting to SSO data");
+            await updateCustomerName(stored.given_name, stored.family_name);
+            await upsertAddress(
+              customer.defaultAddress?.id ?? null,
+              stored.address
+            );
+            await shopify.storage.write(NAV_GUARD_KEY, "1");
+            shopify.navigation.navigate("shopify:customer-account/profile");
+          }
+        }
+      } catch (err) {
+        console.error("[sso-sync] unexpected error:", err);
+      }
+    }
   }, []);
 
-  // Attach change handler to the s-switch web component
-  useEffect(() => {
-    const el = switchEl.current;
-    if (!el) return;
-
-    const handler = async (e: Event) => {
-      const val = (e.target as EventTarget & { checked?: boolean }).checked ?? false;
-      setEnabled(val);
-      await shopify.storage.write(SYNC_ENABLED_KEY, val);
-      // Clear cached profile so the next enabled visit re-fetches fresh SSO data
-      if (!val) await shopify.storage.delete(STORAGE_KEY);
-    };
-
-    el.addEventListener("change", handler);
-    return () => el.removeEventListener("change", handler);
-  }, []);
-
-  return (
-    <s-section heading="SSO Profile Sync">
-      <s-stack direction="block" gap="base">
-        <s-text>
-          When enabled, your profile data (name and address) is automatically
-          synced from SSO on each visit.
-        </s-text>
-        <s-switch
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ref={switchEl as any}
-          label="Sync profile data from SSO on profile visit"
-          name="sso_sync_enabled"
-          checked={enabled}
-        />
-      </s-stack>
-    </s-section>
-  );
+  // Render nothing — this extension is purely behavioral
+  return null;
 }
 
 export default async () => {
