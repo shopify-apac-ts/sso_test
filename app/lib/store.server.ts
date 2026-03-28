@@ -19,10 +19,10 @@ export interface SsoProfile {
 export function getSsoTestProfile(_userId: string): SsoProfile {
   const ts = new Date().toISOString();
   return {
-    given_name: "Taro",
+    given_name: "Taro SSO",
     family_name: "Yamada",
     address: {
-      street_address: `1-1-1 Chiyoda\nChiyoda Building 101 (${ts})`,
+      street_address: `1-1-1 SSO Chiyoda\nChiyoda Building 101 (${ts})`,
       locality: "Chiyoda-ku",
       region: "Tokyo",
       postal_code: "100-0001",
@@ -58,18 +58,18 @@ export interface ShopifyClaimsProfile {
 export function getShopifyClaimsProfile(_userId: string): ShopifyClaimsProfile {
   const ts = new Date().toISOString();
   return {
-    given_name: "Taro",
+    given_name: "Taro Claims",
     family_name: "Yamada",
     phone_number: "+81312345678",
     addresses: [
       {
-        address1: "1-1-1 Chiyoda",
+        address1: "1-1-1 Claims Chiyoda",
         address2: `Chiyoda Building 101 (${ts})`,
         city: "Chiyoda-ku",
         province_code: "JP-13",
         country_code: "JP",
         zip: "100-0001",
-        first_name: "Taro",
+        first_name: "Taro Claims",
         last_name: "Yamada",
         phone: "+81312345678",
         default: true,
