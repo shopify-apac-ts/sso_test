@@ -16,6 +16,7 @@ import {
   storeRefreshToken,
   getRefreshToken,
   deleteRefreshToken,
+  getShopifyClaimsProfile,
 } from "~/lib/store.server";
 
 const corsHeaders = {
@@ -118,9 +119,10 @@ export async function action({ request }: ActionFunctionArgs) {
     deleteAuthCode(code);
 
     const { userId, email, scope, nonce } = authData;
+    const shopifyClaims = getShopifyClaimsProfile(userId);
 
     const [idToken, accessToken] = await Promise.all([
-      signIdToken({ sub: userId, email, clientId: client_id, nonce, issuer: baseUrl }),
+      signIdToken({ sub: userId, email, clientId: client_id, nonce, issuer: baseUrl, shopifyClaims }),
       signAccessToken({ sub: userId, email, issuer: baseUrl }),
     ]);
 
@@ -148,9 +150,10 @@ export async function action({ request }: ActionFunctionArgs) {
     if (!rtData) return oidcError("invalid_grant", "Invalid or expired refresh_token");
 
     const { userId, email, scope } = rtData;
+    const shopifyClaims = getShopifyClaimsProfile(userId);
 
     const [idToken, accessToken] = await Promise.all([
-      signIdToken({ sub: userId, email, clientId: client_id, issuer: baseUrl }),
+      signIdToken({ sub: userId, email, clientId: client_id, issuer: baseUrl, shopifyClaims }),
       signAccessToken({ sub: userId, email, issuer: baseUrl }),
     ]);
 

@@ -31,6 +31,53 @@ export function getSsoTestProfile(_userId: string): SsoProfile {
   };
 }
 
+export interface ShopifyAddress {
+  address1: string;
+  address2?: string;
+  city: string;
+  province_code: string;
+  country_code: string;
+  zip: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  company?: string;
+  default: boolean;
+}
+
+export interface ShopifyClaimsProfile {
+  given_name: string;
+  family_name: string;
+  phone_number?: string;
+  addresses: ShopifyAddress[];
+  tags?: string;
+}
+
+// Returns a fresh Shopify-format profile on every call.
+// address2 contains the current ISO timestamp to make changes visible on each login.
+export function getShopifyClaimsProfile(_userId: string): ShopifyClaimsProfile {
+  const ts = new Date().toISOString();
+  return {
+    given_name: "Taro",
+    family_name: "Yamada",
+    phone_number: "+81312345678",
+    addresses: [
+      {
+        address1: "1-1-1 Chiyoda",
+        address2: `Chiyoda Building 101 (${ts})`,
+        city: "Chiyoda-ku",
+        province_code: "JP-13",
+        country_code: "JP",
+        zip: "100-0001",
+        first_name: "Taro",
+        last_name: "Yamada",
+        phone: "+81312345678",
+        default: true,
+      },
+    ],
+  };
+}
+
 export interface AuthCodeData {
   userId: string;
   email: string;
