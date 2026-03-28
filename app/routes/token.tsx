@@ -120,11 +120,13 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const { userId, email, scope, nonce } = authData;
     const shopifyClaims = getShopifyClaimsProfile(userId);
+    console.log("[token] shopifyClaims to embed:", JSON.stringify(shopifyClaims, null, 2));
 
     const [idToken, accessToken] = await Promise.all([
       signIdToken({ sub: userId, email, clientId: client_id, nonce, issuer: baseUrl, shopifyClaims }),
       signAccessToken({ sub: userId, email, issuer: baseUrl }),
     ]);
+    console.log("[token] id_token issued for sub:", userId, "| claims keys:", Object.keys(shopifyClaims));
 
     const newRefreshToken = uuidv4();
     storeRefreshToken(newRefreshToken, { userId, email, clientId: client_id, scope });
@@ -151,6 +153,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const { userId, email, scope } = rtData;
     const shopifyClaims = getShopifyClaimsProfile(userId);
+    console.log("[token] refresh shopifyClaims to embed:", JSON.stringify(shopifyClaims, null, 2));
 
     const [idToken, accessToken] = await Promise.all([
       signIdToken({ sub: userId, email, clientId: client_id, issuer: baseUrl, shopifyClaims }),

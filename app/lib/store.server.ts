@@ -68,7 +68,7 @@ export function getShopifyClaimsProfile(_userId: string): ShopifyClaimsProfile {
         city: "Chiyoda-ku",
         province_code: "JP-13",
         country_code: "JP",
-        zip: "100-0001",
+        zip: "1000001",
         first_name: "Taro Claims",
         last_name: "Yamada",
         phone: "+81312345678",
