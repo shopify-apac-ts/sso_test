@@ -31,6 +31,8 @@ export async function action({ request }: ActionFunctionArgs) {
   const scope = (form.get("scope") as string) || "openid email";
   const state = (form.get("state") as string) || "";
   const nonce = (form.get("nonce") as string) || "";
+  const codeChallenge = (form.get("code_challenge") as string) || undefined;
+  const codeChallengeMethod = (form.get("code_challenge_method") as string) || undefined;
 
   if (!email.trim() || !password.trim()) {
     return json({ error: "Email and password are required" });
@@ -50,6 +52,8 @@ export async function action({ request }: ActionFunctionArgs) {
     redirectUri,
     scope,
     nonce: nonce || undefined,
+    codeChallenge: codeChallenge || undefined,
+    codeChallengeMethod: codeChallengeMethod || undefined,
     createdAt: Date.now(),
   });
 
@@ -96,6 +100,8 @@ export default function Login() {
           <input type="hidden" name="scope" value={params.scope ?? "openid email"} />
           <input type="hidden" name="state" value={params.state ?? ""} />
           <input type="hidden" name="nonce" value={params.nonce ?? ""} />
+          <input type="hidden" name="code_challenge" value={params.code_challenge ?? ""} />
+          <input type="hidden" name="code_challenge_method" value={params.code_challenge_method ?? ""} />
 
           <div style={fieldStyle}>
             <label style={labelStyle} htmlFor="email">Email</label>

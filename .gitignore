@@ -1,8 +1,12 @@
 node_modules/
 build/
+dist/
 .env
 .DS_Store
 package-lock.json
+
+# Shopify CLI
+.shopify/
 
 # Claude Code
 .claude/

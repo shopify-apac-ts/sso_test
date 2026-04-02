@@ -1,0 +1,13 @@
+{
+  "name": "sso-profile-sync",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@shopify/ui-extensions": "~2026.1.0",
+    "@preact/signals": "^1.0.0",
+    "preact": "^10.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

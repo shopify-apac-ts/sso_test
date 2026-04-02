@@ -2,6 +2,7 @@
 // Exchanges an Authorization Code or Refresh Token for an Access Token / ID Token
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import { createHash } from "crypto";
 import { v4 as uuidv4 } from "uuid";
 import {
   getBaseUrl,
@@ -16,6 +17,7 @@ import {
   storeRefreshToken,
   getRefreshToken,
   deleteRefreshToken,
+  getShopifyClaimsProfile,
 } from "~/lib/store.server";
 
 const corsHeaders = {
@@ -114,15 +116,38 @@ export async function action({ request }: ActionFunctionArgs) {
       return oidcError("invalid_grant", "redirect_uri mismatch");
     }
 
+    // PKCE verification (S256)
+    const codeVerifier = params.code_verifier;
+    if (authData.codeChallenge) {
+      if (!codeVerifier) {
+        console.log("[token] ERROR: code_verifier required but missing");
+        return oidcError("invalid_grant", "code_verifier required");
+      }
+      const computed = createHash("sha256")
+        .update(codeVerifier)
+        .digest("base64")
+        .replace(/=/g, "")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_");
+      console.log("[token] PKCE challenge match:", computed === authData.codeChallenge);
+      if (computed !== authData.codeChallenge) {
+        console.log("[token] ERROR: PKCE code_verifier mismatch");
+        return oidcError("invalid_grant", "code_verifier mismatch");
+      }
+    }
+
     // Authorization codes are single-use
     deleteAuthCode(code);
 
     const { userId, email, scope, nonce } = authData;
+    const shopifyClaims = getShopifyClaimsProfile(userId);
+    console.log("[token] shopifyClaims to embed:", JSON.stringify(shopifyClaims, null, 2));
 
     const [idToken, accessToken] = await Promise.all([
-      signIdToken({ sub: userId, email, clientId: client_id, nonce, issuer: baseUrl }),
+      signIdToken({ sub: userId, email, clientId: client_id, nonce, issuer: baseUrl, shopifyClaims }),
       signAccessToken({ sub: userId, email, issuer: baseUrl }),
     ]);
+    console.log("[token] id_token issued for sub:", userId, "| claims keys:", Object.keys(shopifyClaims));
 
     const newRefreshToken = uuidv4();
     storeRefreshToken(newRefreshToken, { userId, email, clientId: client_id, scope });
@@ -148,9 +173,11 @@ export async function action({ request }: ActionFunctionArgs) {
     if (!rtData) return oidcError("invalid_grant", "Invalid or expired refresh_token");
 
     const { userId, email, scope } = rtData;
+    const shopifyClaims = getShopifyClaimsProfile(userId);
+    console.log("[token] refresh shopifyClaims to embed:", JSON.stringify(shopifyClaims, null, 2));
 
     const [idToken, accessToken] = await Promise.all([
-      signIdToken({ sub: userId, email, clientId: client_id, issuer: baseUrl }),
+      signIdToken({ sub: userId, email, clientId: client_id, issuer: baseUrl, shopifyClaims }),
       signAccessToken({ sub: userId, email, issuer: baseUrl }),
     ]);
 

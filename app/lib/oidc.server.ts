@@ -19,12 +19,19 @@ export async function signIdToken({
   clientId,
   nonce,
   issuer,
+  shopifyClaims,
 }: {
   sub: string;
   email: string;
   clientId: string;
   nonce?: string;
   issuer: string;
+  shopifyClaims?: {
+    given_name: string;
+    family_name: string;
+    addresses: unknown[];
+    tags?: string;
+  };
 }): Promise<string> {
   const { key, kid } = await getPrivateKey();
   const now = Math.floor(Date.now() / 1000);
@@ -34,8 +41,16 @@ export async function signIdToken({
     email_verified: true,
   };
   if (nonce) claims.nonce = nonce;
+  if (shopifyClaims) {
+    claims.given_name = shopifyClaims.given_name;
+    claims.family_name = shopifyClaims.family_name;
+    claims["urn:shopify:customer:addresses"] = shopifyClaims.addresses;
+    if (shopifyClaims.tags) claims["urn:shopify:customer:tags"] = shopifyClaims.tags;
+  }
 
-  return new SignJWT(claims)
+  console.log("[oidc] JWT payload keys:", Object.keys(claims));
+  console.log("[oidc] urn:shopify:customer:addresses present:", "urn:shopify:customer:addresses" in claims);
+  const jwt = await new SignJWT(claims)
     .setProtectedHeader({ alg: "RS256", kid })
     .setIssuer(issuer)
     .setAudience(clientId)
@@ -43,6 +58,12 @@ export async function signIdToken({
     .setIssuedAt(now)
     .setExpirationTime(now + 3600)
     .sign(key);
+  // Decode and log the actual JWT payload to verify claim names
+  const payloadB64 = jwt.split(".")[1];
+  const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
+  console.log("[oidc] JWT payload claim keys:", Object.keys(payload));
+  console.log("[oidc] JWT payload:", JSON.stringify(payload, null, 2));
+  return jwt;
 }
 
 export async function signAccessToken({
